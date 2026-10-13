@@ -1,1 +1,11 @@
-
+CREATE TABLE IF NOT EXISTS users(id SERIAL PRIMARY KEY,name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,phone TEXT NOT NULL,pass_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN('customer','admin')),created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS wallets(user_id INT PRIMARY KEY REFERENCES users(id),balance BIGINT NOT NULL DEFAULT 0 CHECK(balance>=0));
+CREATE TABLE IF NOT EXISTS plans(id SERIAL PRIMARY KEY,network TEXT NOT NULL CHECK(network IN('MTN','AIRTEL','GLO','9MOBILE')),name TEXT NOT NULL,validity TEXT NOT NULL,provider_code TEXT NOT NULL,cost BIGINT NOT NULL CHECK(cost>=0),price BIGINT NOT NULL CHECK(price>=0),active BOOLEAN DEFAULT true,UNIQUE(network,provider_code));
+CREATE TABLE IF NOT EXISTS ledger(id SERIAL PRIMARY KEY,user_id INT NOT NULL REFERENCES users(id),type TEXT NOT NULL CHECK(type IN('deposit','purchase','refund','adjustment')),amount BIGINT NOT NULL,balance_after BIGINT NOT NULL,ref TEXT UNIQUE NOT NULL,created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS payments(reference TEXT PRIMARY KEY,user_id INT NOT NULL REFERENCES users(id),amount BIGINT NOT NULL CHECK(amount>0),status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN('pending','success','failed')),created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS webhook_events(id SERIAL PRIMARY KEY,event_key TEXT UNIQUE NOT NULL,payload JSONB,created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS orders(id SERIAL PRIMARY KEY,ref TEXT UNIQUE NOT NULL,user_id INT NOT NULL REFERENCES users(id),plan_id INT NOT NULL REFERENCES plans(id),phone TEXT NOT NULL,amount BIGINT NOT NULL,cost BIGINT NOT NULL,status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN('pending','successful','failed','refunded')),idem_key TEXT NOT NULL,created_at TIMESTAMPTZ DEFAULT now(),UNIQUE(user_id,idem_key));
+CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS provider_logs(id SERIAL PRIMARY KEY,order_ref TEXT,response JSONB,created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS tickets(id SERIAL PRIMARY KEY,user_id INT REFERENCES users(id),message TEXT NOT NULL,status TEXT DEFAULT 'open',created_at TIMESTAMPTZ DEFAULT now());
+CREATE TABLE IF NOT EXISTS audit_logs(id SERIAL PRIMARY KEY,admin_id INT,action TEXT,detail JSONB,created_at TIMESTAMPTZ DEFAULT now());
