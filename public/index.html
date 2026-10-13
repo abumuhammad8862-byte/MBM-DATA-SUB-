@@ -1,1 +1,33 @@
-
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MBM DATA SUB</title><style>
+:root{--b:#1e5bff;--r:#ff2e4d;--bg:#070d1f;--card:#0f1a38;--t:#e8eeff;color-scheme:dark}*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--t)}
+header{background:#0a1430;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;border-bottom:3px solid var(--r);box-shadow:0 2px 16px #ff2e4d66}
+main{max-width:640px;margin:auto;padding:14px}.c{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;border:1px solid #1e5bff55;box-shadow:0 0 14px #1e5bff33}
+input,select,button{width:100%;padding:12px;margin:5px 0;border-radius:12px;border:1px solid #2a3d7a;background:#0a1430;color:var(--t);font-size:16px}
+button{background:var(--b);color:#fff;border:0;font-weight:600;box-shadow:0 0 10px #1e5bff88}button.r{background:var(--r);box-shadow:0 0 10px #ff2e4d88}#msg{padding:10px;border-radius:10px;display:none;margin-bottom:10px;color:#fff}
+</style></head><body><header><b>MBM DATA SUB</b><a id="lo" style="display:none;color:#fff" href="#">Logout</a></header><main>
+<div id="msg"></div><div id="auth" class="c"><h3>Login / Register</h3>
+<input id="n" placeholder="Full name (register only)"><input id="e" type="email" placeholder="Email"><input id="p" placeholder="Phone 080..."><input id="pw" type="password" placeholder="Password (8+)">
+<button onclick="go('login')">Login</button><button class="r" onclick="go('register')">Register</button></div>
+<div id="app" style="display:none"><div class="c"><b id="who"></b><h2 id="bal"></h2><input id="amt" type="number" placeholder="Amount ₦"><button onclick="dep()">Fund wallet</button></div>
+<div class="c"><h3>Buy data</h3><select id="net" onchange="fill()"><option>MTN</option><option>AIRTEL</option><option>GLO</option><option>9MOBILE</option></select><select id="pl"></select>
+<input id="ph" placeholder="Recipient phone"><button onclick="buy()">Confirm purchase</button></div>
+<div class="c"><h3>History</h3><div id="h"></div></div>
+<div class="c"><h3>Support</h3><input id="tk" placeholder="Describe your issue"><button onclick="tick()">Send</button><small>Terms & privacy: add your own pages before launch.</small></div></div></main>
+<script>
+const $=i=>document.getElementById(i);let plans=[];
+const say=(t,ok)=>{const m=$('msg');m.textContent=t;m.style.display='block';m.style.background=ok?'#0f6b3a':'#8a1c2b'};
+const api=async(u,m,b)=>{const r=await fetch('/api'+u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Error');return j};
+const naira=k=>'₦'+(k/100).toLocaleString();
+async function go(k){try{await api('/'+k,'POST',{name:$('n').value,email:$('e').value,phone:$('p').value,password:$('pw').value});load()}catch(e){say(e.message)}}
+async function load(){try{const m=await api('/me');$('auth').style.display='none';$('app').style.display='block';$('lo').style.display='inline';
+$('who').textContent=m.name;$('bal').textContent=naira(m.balance);plans=await api('/plans');fill();hist();
+const q=new URLSearchParams(location.search).get('paid');if(q){const v=await api('/deposit/verify/'+q);say('Payment: '+v.status,v.status==='success');history.replaceState({},'','/');load()}}catch(e){}}
+function fill(){const p=$('pl');p.textContent='';plans.filter(x=>x.network===$('net').value).forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.name+' ('+x.validity+') '+naira(x.price);p.appendChild(o)})}
+async function dep(){try{location=(await api('/deposit','POST',{amount:$('amt').value})).url}catch(e){say(e.message)}}
+let idem=crypto.randomUUID();
+async function buy(){try{const r=await api('/orders','POST',{plan_id:+$('pl').value,phone:$('ph').value,idem_key:idem});idem=crypto.randomUUID();say('Order '+r.ref+': '+r.status,r.status==='successful');load()}catch(e){say(e.message)}}
+async function hist(){const o=await api('/orders');const h=$('h');h.textContent='';o.forEach(x=>{const d=document.createElement('div');d.textContent=x.network+' '+x.name+' → '+x.phone+' | '+naira(x.amount)+' | '+x.status+' | '+x.ref;h.appendChild(d)})}
+async function tick(){try{await api('/tickets','POST',{message:$('tk').value});say('Sent',1)}catch(e){say(e.message)}}
+$('lo').onclick=async()=>{await api('/logout','POST');location.reload()};load();
+</script></body></html>
